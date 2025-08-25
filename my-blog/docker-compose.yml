@@ -1,0 +1,17 @@
+# docker-compose.yml
+services:
+  remark42:
+    image: ghcr.io/umputun/remark42:latest
+    container_name: remark42
+    restart: unless-stopped
+    ports:
+      - '8080:8080'
+    environment:
+      - SITE=remark
+      - REMARK_URL=https://b47445ba0d8a.ngrok-free.app  # Your ngrok URL
+      - SECRET=dev_secret_change_me_in_production
+      - ALLOWED_HOSTS=localhost,127.0.0.1,b47445ba0d8a.ngrok-free.app
+      - AUTH_ANON=true
+      - CORS_ENABLED=true
+    volumes:
+      - ./remark42-data:/srv/var
