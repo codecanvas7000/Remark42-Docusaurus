@@ -8,9 +8,10 @@ services:
       - '8080:8080'
     environment:
       - SITE=remark
-      - REMARK_URL=https://b47445ba0d8a.ngrok-free.app  # Your ngrok URL
+      - REMARK_URL=https://61faf433f3de.ngrok-free.app  # Your ngrok URL
       - SECRET=dev_secret_change_me_in_production
-      - ALLOWED_HOSTS=localhost,127.0.0.1,b47445ba0d8a.ngrok-free.app
+      - ALLOWED_HOSTS=localhost,127.0.0.1,61faf433f3de.ngrok-free.app
+      - ALLOWED_ORIGINS=http://localhost:3000,https://localhost:3000
       - AUTH_ANON=true
       - CORS_ENABLED=true
     volumes:

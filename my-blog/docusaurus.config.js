@@ -50,9 +50,8 @@ const config = {
 
   // Add custom fields for Remark42 configuration
   customFields: {
-    REMARK42_HOST:
-      process.env.REMARK42_HOST || 'https://b47445ba0d8a.ngrok-free.app',
-    REMARK42_SITE_ID: process.env.REMARK42_SITE_ID || 'remark',
+    REMARK42_HOST: process.env.REMARK42_HOST,
+    REMARK42_SITE_ID: process.env.REMARK42_SITE_ID,
   },
 
   presets: [

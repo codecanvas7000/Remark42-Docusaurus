@@ -39,19 +39,19 @@ function validateHost(host) {
     const allowedDomains = [
       'localhost',
       '127.0.0.1',
-      'ngrok.io',
-      'ngrok-free.app',
-      'ngrok.app',
-      '*.ngrok-free.app', // Your specific ngrok domain
       // Add your production domains here
       'your-domain.com',
       'remark42.your-domain.com',
-      'https://d9e68c1066c9.ngrok-free.app',
     ];
+
+    // Allow all ngrok domains for development
+    const isNgrokDomain = url.hostname.includes('ngrok') || 
+                         url.hostname.includes('ngrok-free.app') || 
+                         url.hostname.includes('ngrok.app');
 
     const isAllowed = allowedDomains.some(
       (domain) => url.hostname === domain || url.hostname.includes(domain)
-    );
+    ) || isNgrokDomain;
 
     if (!isAllowed) {
       return null;
@@ -131,7 +131,7 @@ export default function Remark42({ url }) {
   const instanceRef = useRef(null);
   const [status, setStatus] = useState('initializing');
 
-  // Strict validation with debugging
+  // Get configuration values
   const rawHost = siteConfig.customFields?.REMARK42_HOST;
   const rawSiteId = siteConfig.customFields?.REMARK42_SITE_ID;
 
@@ -139,23 +139,32 @@ export default function Remark42({ url }) {
   const SITE_ID = sanitizeSiteId(rawSiteId);
   const IS_PROD = process.env.NODE_ENV === 'production';
 
+  // Debug logging
+  console.log('Remark42 Config:', { rawHost, rawSiteId, HOST, SITE_ID });
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const targetUrl =
       url || `${window.location.origin}${window.location.pathname}`;
 
+    console.log('Remark42: Target URL for comments:', targetUrl);
+
     // Security check: Fail if no valid host in production
     if (!HOST || !SITE_ID) {
+      console.log('Remark42: Missing config, falling back', { HOST, SITE_ID });
       setStatus('fallback');
       return;
     }
 
     // Production security: Only allow HTTPS
     if (IS_PROD && !HOST.startsWith('https://')) {
+      console.log('Remark42: Non-HTTPS in production, falling back');
       setStatus('fallback');
       return;
     }
+
+    console.log('Remark42: Starting initialization with', { HOST, SITE_ID });
 
     let cancelled = false;
 
@@ -174,27 +183,31 @@ export default function Remark42({ url }) {
         // Security timeout for API - increased since script is loading successfully
         const apiTimeout = setTimeout(() => {
           if (!cancelled) {
+            console.log('Remark42: API timeout, falling back');
             setStatus('fallback');
           }
-        }, 8000); // Increased to 8 seconds since script loads fine
+        }, 15000); // Increased to 15 seconds to allow more time
 
         // Check for API with limited attempts - increased since script loads fine
         let attempts = 0;
-        const maxAttempts = 20; // Increased since script loading is working
+        const maxAttempts = 50; // Increased since script loading is working
 
         const checkApi = () => {
           attempts++;
+          console.log(`Remark42: Checking API attempt ${attempts}/${maxAttempts}`, { REMARK42: !!window.REMARK42 });
 
           if (
             window.REMARK42 &&
             typeof window.REMARK42.createInstance === 'function'
           ) {
+            console.log('Remark42: API found, creating instance');
             clearTimeout(apiTimeout);
             createSecureInstance();
             return;
           }
 
           if (attempts >= maxAttempts) {
+            console.log('Remark42: Max attempts reached, falling back');
             clearTimeout(apiTimeout);
             setStatus('fallback');
             return;
@@ -206,9 +219,16 @@ export default function Remark42({ url }) {
         const createSecureInstance = () => {
           try {
             if (!nodeRef.current) {
+              console.log('Remark42: Node ref not found, falling back');
               setStatus('fallback');
               return;
             }
+
+            console.log('Remark42: Creating instance with config:', {
+              host: HOST,
+              site_id: SITE_ID,
+              url: targetUrl
+            });
 
             instanceRef.current = window.REMARK42.createInstance({
               node: nodeRef.current,
@@ -216,12 +236,15 @@ export default function Remark42({ url }) {
               site_id: SITE_ID,
               url: targetUrl,
               theme: 'light',
-              max_shown_comments: 10, // Security limit
-              simple_view: true, // Limit features for security
+              max_shown_comments: 15,
+              simple_view: false, // Enable full features
+              components: ['embed'] // Explicitly specify embed component
             });
 
+            console.log('Remark42: Instance created successfully');
             setStatus('loaded');
           } catch (error) {
+            console.log('Remark42: Instance creation failed', error);
             setStatus('fallback');
           }
         };
@@ -250,9 +273,11 @@ export default function Remark42({ url }) {
 
   // Fallback component (same as before)
   const SecureFallback = () => {
-    const fallbackUrl = `${HOST}/web/?site=${SITE_ID}&url=${encodeURIComponent(
-      url || `${window.location.origin}${window.location.pathname}`
-    )}`;
+    const fallbackUrl = typeof window !== 'undefined' 
+      ? `${HOST}/web/?site=${SITE_ID}&url=${encodeURIComponent(
+          url || `${window.location.origin}${window.location.pathname}`
+        )}`
+      : `${HOST}/web/?site=${SITE_ID}`;
 
     return (
       <div style={{ margin: '40px 0' }}>
@@ -326,8 +351,11 @@ export default function Remark42({ url }) {
 
   // Always show fallback for any non-loaded state in this secure version
   if (status !== 'loaded') {
+    console.log('Remark42: Rendering fallback, status:', status);
     return <SecureFallback />;
   }
+
+  console.log('Remark42: Rendering interactive widget');
 
   return (
     <div style={{ margin: '40px 0' }}>

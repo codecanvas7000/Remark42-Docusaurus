@@ -6,7 +6,7 @@ export default function configureCspForRemark42() {
       const meta = document.querySelector('meta[name="remark42-host"]');
       return meta
         ? meta.content
-        : process.env.REMARK42_HOST || 'https://d9e68c1066c9.ngrok-free.app';
+        : window.remark_config?.host || 'https://61faf433f3de.ngrok-free.app';
     };
 
     const remark42Host = getHostFromMeta();
@@ -51,12 +51,18 @@ export default function configureCspForRemark42() {
       content = addToDirective(content, 'script-src', [
         remark42Origin,
         "'unsafe-inline'",
+        "'unsafe-eval'",
+      ]);
+      content = addToDirective(content, 'script-src-elem', [
+        remark42Origin,
+        "'unsafe-inline'",
       ]);
       content = addToDirective(content, 'style-src', [
         remark42Origin,
         "'unsafe-inline'",
       ]);
       content = addToDirective(content, 'img-src', [remark42Origin, 'data:']);
+      content = addToDirective(content, 'worker-src', [remark42Origin]);
 
       existingMeta.setAttribute('content', content.trim());
     } else {
@@ -69,8 +75,10 @@ export default function configureCspForRemark42() {
           `frame-src 'self' ${remark42Origin}`,
           `connect-src 'self' ${remark42Origin}`,
           `script-src 'self' 'unsafe-inline' 'unsafe-eval' ${remark42Origin}`,
+          `script-src-elem 'self' 'unsafe-inline' ${remark42Origin}`,
           `style-src 'self' 'unsafe-inline' ${remark42Origin}`,
           `img-src 'self' data: ${remark42Origin}`,
+          `worker-src ${remark42Origin}`,
           "font-src 'self' data:",
           "object-src 'none'",
           "base-uri 'self'",
