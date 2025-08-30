@@ -27,15 +27,28 @@ ngrok http 8080 > /dev/null 2>&1 &
 NGROK_PID=$!
 
 # Wait for ngrok to start
-sleep 3
+echo "⏳ Waiting for ngrok to initialize..."
+sleep 8
 
-# Get the ngrok URL
-NGROK_URL=$(curl -s http://localhost:4040/api/tunnels | grep -o 'https://[^"]*\.ngrok-free\.app')
+# Get the ngrok URL with better error handling
+echo "🔍 Getting ngrok tunnel URL..."
+NGROK_URL=""
+for i in {1..10}; do
+    NGROK_URL=$(curl -s http://localhost:4040/api/tunnels 2>/dev/null | grep -o 'https://[a-f0-9]*\.ngrok-free\.app' | head -1)
+    if [[ ! -z "$NGROK_URL" ]]; then
+        break
+    fi
+    sleep 2
+    echo "   Attempt $i/10..."
+done
 
-if [ -z "$NGROK_URL" ]; then
+if [[ -z "$NGROK_URL" ]]; then
     echo "❌ Failed to get ngrok URL"
-    echo "💡 Make sure ngrok is properly configured with your authtoken"
-    echo "   Visit: https://dashboard.ngrok.com/get-started/your-authtoken"
+    echo "💡 Troubleshooting steps:"
+    echo "   1. Make sure ngrok is properly configured with your authtoken"
+    echo "   2. Visit: https://dashboard.ngrok.com/get-started/your-authtoken"
+    echo "   3. Run: ngrok config add-authtoken YOUR_TOKEN"
+    echo "   4. Check if ngrok is running: curl http://localhost:4040/api/tunnels"
     kill $NGROK_PID 2>/dev/null
     exit 1
 fi
@@ -59,15 +72,24 @@ else
     exit 1
 fi
 
+# Check if Node.js is available
+if ! command -v node > /dev/null 2>&1; then
+    echo "❌ Node.js is not installed or not in PATH"
+    echo "📦 Please install Node.js from: https://nodejs.org/"
+    kill $NGROK_PID 2>/dev/null
+    exit 1
+fi
+
 # Wait for Docker to be ready
 echo "⏳ Waiting for Remark42 server to be ready..."
-sleep 10
+sleep 15
 
 # Test if Remark42 is responding
-if curl -s "$NGROK_URL/api/v1/ping" > /dev/null; then
+echo "🧪 Testing Remark42 server..."
+if curl -s --max-time 10 "$NGROK_URL/api/v1/ping" > /dev/null 2>&1; then
     echo "✅ Remark42 server is ready!"
 else
-    echo "⚠️  Remark42 server is starting up (this may take a moment)"
+    echo "⚠️ Remark42 server is still starting up (this may take a moment)"
 fi
 
 echo ""
@@ -75,6 +97,7 @@ echo "🎉 Setup Complete!"
 echo "=================="
 echo "📝 Remark42 URL: $NGROK_URL"
 echo "🌐 Blog URL: http://localhost:3000"
+echo "🔗 ngrok Dashboard: http://localhost:4040"
 echo ""
 echo "Next steps:"
 echo "1. Start your Docusaurus dev server: npm start"
