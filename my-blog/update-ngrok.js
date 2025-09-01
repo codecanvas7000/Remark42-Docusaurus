@@ -36,6 +36,12 @@ function updateNgrokUrl(newUrl) {
           search: /REMARK42_HOST=https:\/\/[a-f0-9]+\.ngrok-free\.app/,
           replace: `REMARK42_HOST=${newUrl}`,
         },
+        // Also handle case where URL might not match the pattern
+        {
+          search: /REMARK42_HOST=.*/,
+          replace: `REMARK42_HOST=${newUrl}`,
+          condition: (content) => !content.match(/REMARK42_HOST=https:\/\/[a-f0-9]+\.ngrok-free\.app/)
+        },
       ],
     },
     {
@@ -144,28 +150,30 @@ function updateNgrokUrl(newUrl) {
   // Restart Docker containers
   console.log('🐳 Restarting Docker containers...');
   try {
+    const dockerOptions = { stdio: 'inherit', cwd: __dirname };
+    
     // Check if Docker Compose is running
     try {
-      execSync('docker compose ps', { stdio: 'pipe' });
+      execSync('docker compose ps', { stdio: 'pipe', cwd: __dirname });
     } catch (error) {
       console.log('📦 Docker Compose not running yet, starting fresh...');
     }
 
     // Stop existing containers
-    execSync('docker compose down', { stdio: 'inherit' });
+    execSync('docker compose down', dockerOptions);
 
     // Clear old Remark42 data for fresh start
     console.log('🗑️  Clearing old Remark42 data...');
     try {
       if (process.platform === 'win32') {
-        // Windows command
+        // Windows command - use cmd /c to ensure proper command execution
         execSync(
-          'rmdir /s /q remark42-data 2>nul || echo Data directory cleaned',
-          { stdio: 'inherit' }
+          'cmd /c "if exist remark42-data (rmdir /s /q remark42-data && echo Data directory cleaned) else (echo No data directory to clean)"',
+          { stdio: 'inherit', cwd: __dirname }
         );
       } else {
         // Unix/Linux/macOS command
-        execSync('rm -rf remark42-data', { stdio: 'inherit' });
+        execSync('rm -rf remark42-data', { stdio: 'inherit', cwd: __dirname });
       }
     } catch (error) {
       console.log(
@@ -174,14 +182,14 @@ function updateNgrokUrl(newUrl) {
     }
 
     // Start containers
-    execSync('docker compose up -d', { stdio: 'inherit' });
+    execSync('docker compose up -d', dockerOptions);
     console.log('✅ Docker containers restarted with fresh data');
 
     // Show container logs briefly
     setTimeout(() => {
       try {
         console.log('📋 Container status:');
-        execSync('docker compose ps', { stdio: 'inherit' });
+        execSync('docker compose ps', { stdio: 'inherit', cwd: __dirname });
       } catch (error) {
         // Ignore errors
       }

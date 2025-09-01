@@ -67,10 +67,13 @@ if errorlevel 1 (
 
 REM Update configuration
 echo ⚙️ Updating configuration files...
+echo 🐛 DEBUG: Current directory: %CD%
+echo 🐛 DEBUG: NGROK_URL: %NGROK_URL%
 if exist "update-ngrok.js" (
+    echo 🐛 DEBUG: Found update-ngrok.js, calling node script...
     node update-ngrok.js "%NGROK_URL%"
     if errorlevel 1 (
-        echo ❌ Failed to update configuration
+        echo ❌ Failed to update configuration (exit code: %errorlevel%)
         pause
         exit /b 1
     )
@@ -79,6 +82,7 @@ if exist "update-ngrok.js" (
     echo ❌ update-ngrok.js not found in current directory
     echo 💡 Make sure you're running this script from the project root directory
     echo 📁 Current directory: %CD%
+    dir update-ngrok.js
     pause
     exit /b 1
 )

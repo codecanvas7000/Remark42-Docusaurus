@@ -31,11 +31,14 @@ export default function Remark42({ url }) {
     // Clear any existing content
     containerRef.current.innerHTML = '';
     
-    // Set up Remark42 configuration
+    // Set up Remark42 configuration - match current page protocol
+    const currentProtocol = window.location.protocol;
+    const adjustedPageUrl = pageUrl.replace(/^https?:\/\//, `${currentProtocol}//`);
+    
     window.remark_config = {
       host: HOST,
       site_id: SITE_ID,
-      url: pageUrl,
+      url: adjustedPageUrl,
       page_title: document.title,
       theme: 'light',
       locale: 'en',
@@ -43,13 +46,23 @@ export default function Remark42({ url }) {
       show_rss_subscription: true,
       simple_view: false,
       no_footer: false,
+      max_shown_comments: 10,
+      theme: 'light',
     };
     
     console.log('Remark42 config:', window.remark_config);
     
-    // Load Remark42 script dynamically
+    // Load Remark42 script dynamically  
     const script = document.createElement('script');
-    script.src = `${HOST}/web/embed.js`;
+    
+    // For ngrok URLs, add the bypass parameter to avoid browser warning
+    if (HOST.includes('ngrok')) {
+      script.src = `${HOST}/web/embed.js?ngrok-skip-browser-warning=true`;
+      console.log('Loading Remark42 script with ngrok bypass parameter');
+    } else {
+      script.src = `${HOST}/web/embed.js`;
+    }
+    
     script.async = true;
     script.onload = () => {
       console.log('Remark42 script loaded successfully');
