@@ -1,9 +1,10 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 
 export default function Remark42({ url }) {
   const { siteConfig } = useDocusaurusContext();
   const containerRef = useRef(null);
+  const [showNgrokWarning, setShowNgrokWarning] = useState(false);
 
   const HOST = siteConfig.customFields?.REMARK42_HOST;
   const SITE_ID = siteConfig.customFields?.REMARK42_SITE_ID || 'remark';
@@ -27,6 +28,11 @@ export default function Remark42({ url }) {
     
     console.log('=== REMARK42 USEEFFECT ===');
     console.log('Loading Remark42 with JavaScript embedding');
+    
+    // Show ngrok warning initially for ngrok hosts
+    if (HOST && HOST.includes('ngrok')) {
+      setShowNgrokWarning(true);
+    }
     
     // Clear any existing content
     containerRef.current.innerHTML = '';
@@ -67,6 +73,11 @@ export default function Remark42({ url }) {
     script.onload = () => {
       console.log('Remark42 script loaded successfully');
       
+      // Hide ngrok warning since script loaded successfully
+      if (HOST && HOST.includes('ngrok')) {
+        setShowNgrokWarning(false);
+      }
+      
       // Initialize Remark42 in our container
       if (window.REMARK42) {
         try {
@@ -79,6 +90,9 @@ export default function Remark42({ url }) {
     };
     script.onerror = (error) => {
       console.error('Failed to load Remark42 script:', error);
+      if (HOST.includes('ngrok')) {
+        setShowNgrokWarning(true);
+      }
     };
     
     document.head.appendChild(script);
@@ -122,6 +136,44 @@ export default function Remark42({ url }) {
           </div>
           <span style={{ fontSize: '12px', color: '#666' }}>Remark42</span>
         </div>
+
+        {showNgrokWarning && HOST.includes('ngrok') && (
+          <div style={{
+            background: '#fff3cd',
+            border: '1px solid #ffeaa7',
+            borderRadius: '4px',
+            padding: '15px',
+            marginBottom: '20px',
+            fontSize: '14px'
+          }}>
+            <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>
+              🚀 Ngrok Setup Required
+            </div>
+            <div style={{ marginBottom: '10px' }}>
+              Before comments can load, you need to accept ngrok's terms:
+            </div>
+            <div style={{ marginBottom: '10px' }}>
+              <a 
+                href={HOST} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                style={{
+                  background: '#007acc',
+                  color: 'white',
+                  padding: '8px 16px',
+                  textDecoration: 'none',
+                  borderRadius: '4px',
+                  display: 'inline-block'
+                }}
+              >
+                Visit {HOST} & Accept Terms
+              </a>
+            </div>
+            <div style={{ fontSize: '12px', color: '#666' }}>
+              After accepting, refresh this page and comments will load.
+            </div>
+          </div>
+        )}
 
         <div
           ref={containerRef}
