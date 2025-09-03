@@ -45,8 +45,11 @@ const config = {
     locales: ['en'],
   },
 
-  // Add client modules for Remark42 CSP configuration
-  clientModules: ['./src/clientModules/remark42-csp.js'],
+  // Add client modules for Remark42 CSP configuration and prefetch
+  clientModules: [
+    './src/clientModules/remark42-csp.js',
+    './src/clientModules/remark42-prefetch.js'
+  ],
 
   // Add custom fields for Remark42 configuration
   customFields: {

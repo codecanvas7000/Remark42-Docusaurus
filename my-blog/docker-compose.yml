@@ -9,10 +9,10 @@ services:
       - '8080'
     environment:
       - SITE=remark
-      - REMARK_URL=https://deb5ead704b5.ngrok-free.app # Your actual blog URL
+      - REMARK_URL=https://d1b40c727c7b.ngrok-free.app # Your actual blog URL
       - SECRET=dev_secret_change_me_in_production
-      - ALLOWED_HOSTS=localhost,127.0.0.1,localhost:3000,deb5ead704b5.ngrok-free.app
-      - ALLOWED_ORIGINS=http://localhost:3000,https://localhost:3000,http://127.0.0.1:3000,https://127.0.0.1:3000,https://deb5ead704b5.ngrok-free.app
+      - ALLOWED_HOSTS=localhost,127.0.0.1,localhost:3000,d1b40c727c7b.ngrok-free.app
+      - ALLOWED_ORIGINS=http://localhost:3000,https://localhost:3000,http://127.0.0.1:3000,https://127.0.0.1:3000,https://d1b40c727c7b.ngrok-free.app
       - AUTH_ANON=true
       - ANONYMOUS_VOTE=true
       - CORS_ENABLED=true

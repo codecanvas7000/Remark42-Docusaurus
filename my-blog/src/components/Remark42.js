@@ -1,6 +1,82 @@
 import React, { useEffect, useRef, useState } from 'react';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 
+// Global script cache and prefetch mechanism
+const scriptCache = new Map();
+const prefetchedHosts = new Set();
+
+// Prefetch Remark42 resources
+const prefetchRemark42Resources = (host) => {
+  if (typeof window === 'undefined' || prefetchedHosts.has(host)) return;
+  
+  prefetchedHosts.add(host);
+  
+  // DNS prefetch and preconnect
+  const link1 = document.createElement('link');
+  link1.rel = 'dns-prefetch';
+  link1.href = host;
+  document.head.appendChild(link1);
+  
+  const link2 = document.createElement('link');
+  link2.rel = 'preconnect';
+  link2.href = host;
+  link2.crossOrigin = 'anonymous';
+  document.head.appendChild(link2);
+  
+  // Preload the script
+  const scriptUrl = host.includes('ngrok') 
+    ? `${host}/web/embed.js?ngrok-skip-browser-warning=true`
+    : `${host}/web/embed.js`;
+    
+  const preloadLink = document.createElement('link');
+  preloadLink.rel = 'preload';
+  preloadLink.as = 'script';
+  preloadLink.href = scriptUrl;
+  document.head.appendChild(preloadLink);
+  
+};
+
+// Load script with caching
+const loadRemark42Script = (host) => {
+  return new Promise((resolve, reject) => {
+    const scriptUrl = host.includes('ngrok')
+      ? `${host}/web/embed.js?ngrok-skip-browser-warning=true`
+      : `${host}/web/embed.js`;
+    
+    // Check cache first
+    if (scriptCache.has(scriptUrl)) {
+      const cachedPromise = scriptCache.get(scriptUrl);
+      if (cachedPromise.resolved) {
+        resolve();
+        return;
+      }
+      return cachedPromise.promise;
+    }
+    
+    // Create and cache the promise
+    const promise = new Promise((res, rej) => {
+      const script = document.createElement('script');
+      script.src = scriptUrl;
+      script.async = true;
+      
+      script.onload = () => {
+        scriptCache.set(scriptUrl, { resolved: true, promise });
+        res();
+      };
+      
+      script.onerror = (error) => {
+        scriptCache.delete(scriptUrl);
+        rej(error);
+      };
+      
+      document.head.appendChild(script);
+    });
+    
+    scriptCache.set(scriptUrl, { resolved: false, promise });
+    promise.then(resolve).catch(reject);
+  });
+};
+
 export default function Remark42({ url }) {
   const { siteConfig } = useDocusaurusContext();
   const containerRef = useRef(null);
@@ -13,29 +89,39 @@ export default function Remark42({ url }) {
   const currentUrl = typeof window !== 'undefined' ? window.location.href : url || 'http://localhost:3000';
   const pageUrl = url || currentUrl;
 
-  console.log('=== REMARK42 COMPONENT DEBUG ===');
-  console.log('Component props:', { url });
-  console.log('Site config custom fields:', siteConfig.customFields);
-  console.log('HOST:', HOST);
-  console.log('SITE_ID:', SITE_ID);
-  console.log('Page URL:', pageUrl);
-  console.log('Current page URL:', typeof window !== 'undefined' ? window.location.href : 'SSR');
-  console.log('User agent:', typeof navigator !== 'undefined' ? navigator.userAgent : 'SSR');
-  console.log('Document ready state:', typeof document !== 'undefined' ? document.readyState : 'SSR');
+  
+  // Prefetch resources when component mounts
+  useEffect(() => {
+    if (HOST) {
+      prefetchRemark42Resources(HOST);
+    }
+  }, [HOST]);
   
   useEffect(() => {
-    if (typeof window === 'undefined' || !containerRef.current) return;
+    if (typeof window === 'undefined' || !containerRef.current || !HOST) return;
     
-    console.log('=== REMARK42 USEEFFECT ===');
-    console.log('Loading Remark42 with JavaScript embedding');
+    // Route guard: Only initialize on blog post pages
+    const currentPath = window.location.pathname;
+    const isBlogPostPage = currentPath.startsWith('/blog/') && 
+                          currentPath !== '/blog' && 
+                          currentPath !== '/blog/' &&
+                          !currentPath.includes('/tags') &&
+                          !currentPath.includes('/author') &&
+                          !currentPath.includes('/page/');
+    
+    if (!isBlogPostPage) {
+      return;
+    }
     
     // Show ngrok warning initially for ngrok hosts
-    if (HOST && HOST.includes('ngrok')) {
+    if (HOST.includes('ngrok')) {
       setShowNgrokWarning(true);
     }
     
-    // Clear any existing content
+    // Clear any existing content and set standard container ID
     containerRef.current.innerHTML = '';
+    const containerId = 'remark42';
+    containerRef.current.id = containerId;
     
     // Set up Remark42 configuration - match current page protocol
     const currentProtocol = window.location.protocol;
@@ -56,57 +142,61 @@ export default function Remark42({ url }) {
       theme: 'light',
     };
     
-    console.log('Remark42 config:', window.remark_config);
     
-    // Load Remark42 script dynamically  
-    const script = document.createElement('script');
-    
-    // For ngrok URLs, add the bypass parameter to avoid browser warning
-    if (HOST.includes('ngrok')) {
-      script.src = `${HOST}/web/embed.js?ngrok-skip-browser-warning=true`;
-      console.log('Loading Remark42 script with ngrok bypass parameter');
-    } else {
-      script.src = `${HOST}/web/embed.js`;
-    }
-    
-    script.async = true;
-    script.onload = () => {
-      console.log('Remark42 script loaded successfully');
-      
-      // Hide ngrok warning since script loaded successfully
-      if (HOST && HOST.includes('ngrok')) {
-        setShowNgrokWarning(false);
-      }
-      
-      // Initialize Remark42 in our container
-      if (window.REMARK42) {
-        try {
-          window.REMARK42.createInstance(window.remark_config);
-          console.log('Remark42 instance created');
-        } catch (e) {
-          console.error('Error creating Remark42 instance:', e);
+    // Use the cached script loader
+    loadRemark42Script(HOST)
+      .then(() => {
+        // Hide ngrok warning since script loaded successfully
+        if (HOST.includes('ngrok')) {
+          setShowNgrokWarning(false);
         }
-      }
-    };
-    script.onerror = (error) => {
-      console.error('Failed to load Remark42 script:', error);
-      if (HOST.includes('ngrok')) {
-        setShowNgrokWarning(true);
-      }
-    };
-    
-    document.head.appendChild(script);
+        
+        // Initialize Remark42 in our container
+        if (window.REMARK42) {
+          try {
+            const container = document.getElementById(containerId);
+            if (container) {
+              window.REMARK42.createInstance(window.remark_config);
+            }
+          } catch (e) {
+            // Silent error handling
+          }
+        }
+      })
+      .catch((error) => {
+        if (HOST.includes('ngrok')) {
+          setShowNgrokWarning(true);
+        }
+      });
     
     return () => {
-      // Cleanup
-      document.head.removeChild(script);
+      // Comprehensive cleanup to prevent comment bleeding
+      if (containerRef.current) {
+        containerRef.current.innerHTML = '';
+      }
+      
+      // Destroy Remark42 instance
       if (window.REMARK42) {
         try {
           window.REMARK42.destroy();
-          console.log('Remark42 instance destroyed');
         } catch (e) {
-          console.log('Error destroying Remark42 instance:', e);
+          // Silent cleanup
         }
+      }
+      
+      // Clean up any remaining Remark42 elements in the DOM
+      const remainingElements = document.querySelectorAll('[id^="remark42"], [class*="remark42"], .remark42-widget');
+      remainingElements.forEach(el => {
+        try {
+          el.remove();
+        } catch (e) {
+          // Silent cleanup
+        }
+      });
+      
+      // Clear any global Remark42 config to prevent cross-page pollution
+      if (window.remark_config) {
+        delete window.remark_config;
       }
     };
   }, [HOST, SITE_ID, pageUrl]);
@@ -147,7 +237,7 @@ export default function Remark42({ url }) {
             fontSize: '14px'
           }}>
             <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>
-              🚀 Ngrok Setup Required
+              Ngrok Setup Required
             </div>
             <div style={{ marginBottom: '10px' }}>
               Before comments can load, you need to accept ngrok's terms:
@@ -177,7 +267,6 @@ export default function Remark42({ url }) {
 
         <div
           ref={containerRef}
-          id="remark42"
           style={{
             minHeight: '200px',
             width: '100%',
