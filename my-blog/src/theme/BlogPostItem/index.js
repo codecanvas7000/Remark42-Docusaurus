@@ -1,48 +1,24 @@
-import React, { useEffect } from 'react';
-import BlogPostItem from '@theme-original/BlogPostItem';
-import Head from '@docusaurus/Head';
+import React from 'react';
 import { useLocation } from '@docusaurus/router';
-import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
+import BlogPostItem from '@theme-original/BlogPostItem';
 import Remark42 from '@site/src/components/Remark42';
-import { prefetchRemark42Resources, getRemark42Host } from '@site/src/utils/remark42-utils';
-
-// Prefetch cache for this module
-const blogPrefetchCache = new Set();
 
 export default function BlogPostItemWrapper(props) {
   const location = useLocation();
-  const { siteConfig } = useDocusaurusContext();
-
-  // Check if we're on a full blog post page
-  const isBlogPostPage =
-    location.pathname.startsWith('/blog/') &&
-    location.pathname !== '/blog' &&
-    location.pathname !== '/blog/' &&
-    !location.pathname.includes('/tags') &&
-    !location.pathname.includes('/author') &&
-    !location.pathname.includes('/page/');
-
-  // Prefetch Remark42 resources when this is a blog post page
-  useEffect(() => {
-    if (isBlogPostPage) {
-      const host = getRemark42Host(siteConfig);
-      if (host) {
-        prefetchRemark42Resources(host, blogPrefetchCache);
-      }
-    }
-  }, [isBlogPostPage, siteConfig]);
+  
+  // Only show comments on individual blog post pages, not on blog list pages
+  // Individual blog posts have specific URLs like /blog/post-name or custom slugs
+  // Blog list pages are /blog, /blog/, /blog/page/2, /blog/tags/*, etc.
+  const isIndividualBlogPost = location.pathname !== '/blog' && 
+                              location.pathname !== '/blog/' &&
+                              !location.pathname.startsWith('/blog/page/') &&
+                              !location.pathname.startsWith('/blog/tags/') &&
+                              !location.pathname.startsWith('/blog/authors/');
 
   return (
     <>
       <BlogPostItem {...props} />
-      {isBlogPostPage && (
-        <>
-          <Head>
-            <meta property="og:type" content="article" />
-          </Head>
-          <Remark42 isBlogPostPage={isBlogPostPage} />
-        </>
-      )}
+      {isIndividualBlogPost && <Remark42 />}
     </>
   );
 }

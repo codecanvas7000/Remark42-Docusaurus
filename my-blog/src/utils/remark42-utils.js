@@ -76,6 +76,7 @@ export const isNgrokHost = (host) => {
   return host && host.includes('ngrok');
 };
 
+
 // Warm up connection with preflight request
 export const warmUpConnection = (host) => {
   if (typeof window === 'undefined' || !host || !('fetch' in window)) return;
