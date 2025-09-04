@@ -67,7 +67,7 @@ export default function BlogPostItemWrapper(props) {
           <Head>
             <meta property="og:type" content="article" />
           </Head>
-          <Remark42 />
+          <Remark42 isBlogPostPage={isBlogPostPage} />
         </>
       )}
     </>

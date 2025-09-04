@@ -77,7 +77,7 @@ const loadRemark42Script = (host) => {
   });
 };
 
-export default function Remark42({ url }) {
+export default function Remark42({ url, isBlogPostPage = true }) {
   const { siteConfig } = useDocusaurusContext();
   const containerRef = useRef(null);
   const [showNgrokWarning, setShowNgrokWarning] = useState(false);
@@ -100,15 +100,7 @@ export default function Remark42({ url }) {
   useEffect(() => {
     if (typeof window === 'undefined' || !containerRef.current || !HOST) return;
     
-    // Route guard: Only initialize on blog post pages
-    const currentPath = window.location.pathname;
-    const isBlogPostPage = currentPath.startsWith('/blog/') && 
-                          currentPath !== '/blog' && 
-                          currentPath !== '/blog/' &&
-                          !currentPath.includes('/tags') &&
-                          !currentPath.includes('/author') &&
-                          !currentPath.includes('/page/');
-    
+    // Only initialize if this is confirmed to be a blog post page
     if (!isBlogPostPage) {
       return;
     }
@@ -199,7 +191,7 @@ export default function Remark42({ url }) {
         delete window.remark_config;
       }
     };
-  }, [HOST, SITE_ID, pageUrl]);
+  }, [HOST, SITE_ID, pageUrl, isBlogPostPage]);
 
   return (
     <div style={{ margin: '40px 0' }}>
