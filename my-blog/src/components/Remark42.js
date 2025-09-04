@@ -1,47 +1,24 @@
 import React, { useEffect, useRef, useState } from 'react';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
+import { 
+  getRemark42ScriptUrl, 
+  prefetchRemark42Resources, 
+  getRemark42Host,
+  isNgrokHost
+} from '@site/src/utils/remark42-utils';
 
-// Global script cache and prefetch mechanism
+// Global script cache for performance
 const scriptCache = new Map();
 const prefetchedHosts = new Set();
-
-// Prefetch Remark42 resources
-const prefetchRemark42Resources = (host) => {
-  if (typeof window === 'undefined' || prefetchedHosts.has(host)) return;
-  
-  prefetchedHosts.add(host);
-  
-  // DNS prefetch and preconnect
-  const link1 = document.createElement('link');
-  link1.rel = 'dns-prefetch';
-  link1.href = host;
-  document.head.appendChild(link1);
-  
-  const link2 = document.createElement('link');
-  link2.rel = 'preconnect';
-  link2.href = host;
-  link2.crossOrigin = 'anonymous';
-  document.head.appendChild(link2);
-  
-  // Preload the script
-  const scriptUrl = host.includes('ngrok') 
-    ? `${host}/web/embed.js?ngrok-skip-browser-warning=true`
-    : `${host}/web/embed.js`;
-    
-  const preloadLink = document.createElement('link');
-  preloadLink.rel = 'preload';
-  preloadLink.as = 'script';
-  preloadLink.href = scriptUrl;
-  document.head.appendChild(preloadLink);
-  
-};
 
 // Load script with caching
 const loadRemark42Script = (host) => {
   return new Promise((resolve, reject) => {
-    const scriptUrl = host.includes('ngrok')
-      ? `${host}/web/embed.js?ngrok-skip-browser-warning=true`
-      : `${host}/web/embed.js`;
+    const scriptUrl = getRemark42ScriptUrl(host);
+    if (!scriptUrl) {
+      reject(new Error('Invalid host'));
+      return;
+    }
     
     // Check cache first
     if (scriptCache.has(scriptUrl)) {
@@ -82,7 +59,7 @@ export default function Remark42({ url, isBlogPostPage = true }) {
   const containerRef = useRef(null);
   const [showNgrokWarning, setShowNgrokWarning] = useState(false);
 
-  const HOST = siteConfig.customFields?.REMARK42_HOST;
+  const HOST = getRemark42Host(siteConfig);
   const SITE_ID = siteConfig.customFields?.REMARK42_SITE_ID || 'remark';
 
   // Build proper Remark42 URL with required parameters
@@ -93,7 +70,7 @@ export default function Remark42({ url, isBlogPostPage = true }) {
   // Prefetch resources when component mounts
   useEffect(() => {
     if (HOST) {
-      prefetchRemark42Resources(HOST);
+      prefetchRemark42Resources(HOST, prefetchedHosts);
     }
   }, [HOST]);
   
@@ -106,7 +83,7 @@ export default function Remark42({ url, isBlogPostPage = true }) {
     }
     
     // Show ngrok warning initially for ngrok hosts
-    if (HOST.includes('ngrok')) {
+    if (isNgrokHost(HOST)) {
       setShowNgrokWarning(true);
     }
     
@@ -131,7 +108,6 @@ export default function Remark42({ url, isBlogPostPage = true }) {
       simple_view: false,
       no_footer: false,
       max_shown_comments: 10,
-      theme: 'light',
     };
     
     
@@ -139,7 +115,7 @@ export default function Remark42({ url, isBlogPostPage = true }) {
     loadRemark42Script(HOST)
       .then(() => {
         // Hide ngrok warning since script loaded successfully
-        if (HOST.includes('ngrok')) {
+        if (isNgrokHost(HOST)) {
           setShowNgrokWarning(false);
         }
         
@@ -156,7 +132,7 @@ export default function Remark42({ url, isBlogPostPage = true }) {
         }
       })
       .catch((error) => {
-        if (HOST.includes('ngrok')) {
+        if (isNgrokHost(HOST)) {
           setShowNgrokWarning(true);
         }
       });
@@ -219,7 +195,7 @@ export default function Remark42({ url, isBlogPostPage = true }) {
           <span style={{ fontSize: '12px', color: '#666' }}>Remark42</span>
         </div>
 
-        {showNgrokWarning && HOST.includes('ngrok') && (
+        {showNgrokWarning && isNgrokHost(HOST) && (
           <div style={{
             background: '#fff3cd',
             border: '1px solid #ffeaa7',

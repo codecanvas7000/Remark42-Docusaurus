@@ -4,39 +4,10 @@ import Head from '@docusaurus/Head';
 import { useLocation } from '@docusaurus/router';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Remark42 from '@site/src/components/Remark42';
+import { prefetchRemark42Resources, getRemark42Host } from '@site/src/utils/remark42-utils';
 
-// Early prefetch for blog post pages
-const prefetchRemark42ForBlog = (host) => {
-  if (typeof window === 'undefined' || !host) return;
-  
-  
-  // Ensure DNS and connection are warmed up
-  const ensureConnection = (rel, href) => {
-    if (!document.querySelector(`link[rel="${rel}"][href="${href}"]`)) {
-      const link = document.createElement('link');
-      link.rel = rel;
-      link.href = href;
-      if (rel === 'preconnect') link.crossOrigin = 'anonymous';
-      document.head.appendChild(link);
-    }
-  };
-  
-  ensureConnection('dns-prefetch', host);
-  ensureConnection('preconnect', host);
-  
-  // Ensure script is preloaded
-  const scriptUrl = host.includes('ngrok') 
-    ? `${host}/web/embed.js?ngrok-skip-browser-warning=true`
-    : `${host}/web/embed.js`;
-    
-  if (!document.querySelector(`link[rel="preload"][href="${scriptUrl}"]`)) {
-    const preloadLink = document.createElement('link');
-    preloadLink.rel = 'preload';
-    preloadLink.as = 'script';
-    preloadLink.href = scriptUrl;
-    document.head.appendChild(preloadLink);
-  }
-};
+// Prefetch cache for this module
+const blogPrefetchCache = new Set();
 
 export default function BlogPostItemWrapper(props) {
   const location = useLocation();
@@ -54,10 +25,12 @@ export default function BlogPostItemWrapper(props) {
   // Prefetch Remark42 resources when this is a blog post page
   useEffect(() => {
     if (isBlogPostPage) {
-      const host = siteConfig.customFields?.REMARK42_HOST;
-      prefetchRemark42ForBlog(host);
+      const host = getRemark42Host(siteConfig);
+      if (host) {
+        prefetchRemark42Resources(host, blogPrefetchCache);
+      }
     }
-  }, [isBlogPostPage, siteConfig.customFields?.REMARK42_HOST]);
+  }, [isBlogPostPage, siteConfig]);
 
   return (
     <>
