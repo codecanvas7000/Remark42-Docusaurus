@@ -54,7 +54,7 @@ const loadRemark42Script = (host) => {
   });
 };
 
-export default function Remark42({ url, isBlogPostPage = true }) {
+export default function Remark42({ url }) {
   const { siteConfig } = useDocusaurusContext();
   const containerRef = useRef(null);
   const [showNgrokWarning, setShowNgrokWarning] = useState(false);
@@ -76,11 +76,6 @@ export default function Remark42({ url, isBlogPostPage = true }) {
   
   useEffect(() => {
     if (typeof window === 'undefined' || !containerRef.current || !HOST) return;
-    
-    // Only initialize if this is confirmed to be a blog post page
-    if (!isBlogPostPage) {
-      return;
-    }
     
     // Show ngrok warning initially for ngrok hosts
     if (isNgrokHost(HOST)) {
@@ -167,7 +162,7 @@ export default function Remark42({ url, isBlogPostPage = true }) {
         delete window.remark_config;
       }
     };
-  }, [HOST, SITE_ID, pageUrl, isBlogPostPage]);
+  }, [HOST, SITE_ID, pageUrl]);
 
   return (
     <div style={{ margin: '40px 0' }}>
